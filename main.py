@@ -34,7 +34,9 @@ class DshBridge(Star):
         if self._session is None or self._session.closed:
             # trust_env=False：不吃 HTTP_PROXY 等环境变量，否则本机 127.0.0.1 会被塞进代理
             self._session = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=self.timeout),
+                timeout=aiohttp.ClientTimeout(
+                    total=self.timeout, connect=4, sock_connect=4, sock_read=self.timeout
+                ),
                 trust_env=False,
             )
         return self._session
