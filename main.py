@@ -92,6 +92,12 @@ class DshBridge(Star):
             if not text:
                 return
 
+        # 拦住事件，避免 AstrBot 自己的大模型再抢答一次
+        try:
+            event.stop_event()
+        except Exception:
+            pass
+
         key = f"{event.get_platform_id()}:{event.get_session_id()}"
         if self.show_progress:
             yield event.plain_result("收到，正在让手机那边处理…")
