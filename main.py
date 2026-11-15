@@ -18,7 +18,10 @@ class DshBridge(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
         self.config = config or {}
-        self.base = str(self.config.get("bridge_url", "http://127.0.0.1:8787")).rstrip("/")
+        raw = str(self.config.get("bridge_url", "http://127.0.0.1:8787"))
+        # 支持逗号分隔多个候选地址：按顺序探测，能通的挪到最前面并缓存
+        self.bases = [u.strip().rstrip("/") for u in raw.split(",") if u.strip()] or ["http://127.0.0.1:8787"]
+        self.base = self.bases[0]
         self.token = str(self.config.get("token", "")).strip()
         self.mode = str(self.config.get("reply_mode", "at_or_private")).strip()
         self.prefix = str(self.config.get("prefix", "dsh "))
@@ -38,6 +41,24 @@ class DshBridge(Star):
 
     def _headers(self):
         return {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}
+
+    async def _request(self, path: str, payload: dict):
+        client = await self._client()
+        last = None
+        for base in list(self.bases):
+            try:
+                async with client.post(base + path, json=payload, headers=self._headers()) as resp:
+                    text = await resp.text()
+                    if self.base != base:
+                        logger.info(f"[dsh_bridge] 使用桥地址 {base}")
+                        self.base = base
+                        self.bases.remove(base)
+                        self.bases.insert(0, base)
+                    return resp.status, text
+            except Exception as e:  # noqa: BLE001
+                last = e
+                continue
+        raise last or RuntimeError("没有可用的桥地址")
 
     def _should_handle(self, event: AstrMessageEvent, text: str) -> bool:
         if self.mode == "all":
@@ -73,33 +94,29 @@ class DshBridge(Star):
 
         payload = {"session": key, "text": text, "timeoutMs": self.timeout * 1000}
         try:
-            client = await self._client()
-            async with client.post(f"{self.base}/chat", json=payload, headers=self._headers()) as resp:
-                raw = await resp.text()
-                try:
-                    data = json.loads(raw)
-                except Exception:
-                    data = {"ok": False, "error": raw[:300]}
-                if resp.status != 200 or not data.get("ok"):
-                    err = data.get("error") or f"HTTP {resp.status}"
-                    detail = data.get("detail") or ""
-                    logger.warning(f"[dsh_bridge] failed: {err} {detail}")
-                    yield event.plain_result(f"DSH 那边出错了：{err}"[:500])
-                    return
-                reply = (data.get("reply") or "").strip() or "（DSH 没有返回内容）"
-                yield event.plain_result(reply)
+            status, raw = await self._request("/chat", payload)
+            try:
+                data = json.loads(raw)
+            except Exception:
+                data = {"ok": False, "error": raw[:300]}
+            if status != 200 or not data.get("ok"):
+                err = data.get("error") or f"HTTP {status}"
+                detail = data.get("detail") or ""
+                logger.warning(f"[dsh_bridge] failed: {err} {detail}")
+                yield event.plain_result(f"DSH 那边出错了：{err}"[:500])
+                return
+            reply = (data.get("reply") or "").strip() or "（DSH 没有返回内容）"
+            yield event.plain_result(reply)
         except asyncio.TimeoutError:
             yield event.plain_result("等太久了，这次先放弃。可以让我做个更小的动作再试。")
         except Exception as e:  # noqa: BLE001
             logger.error(f"[dsh_bridge] request error: {e}")
-            yield event.plain_result(f"连不上 DSH 桥（{self.base}）：{type(e).__name__}")
+            yield event.plain_result(f"连不上 DSH 桥（试过 {', '.join(self.bases)}）：{type(e).__name__}")
 
     async def _reset(self, event: AstrMessageEvent):
         key = f"{event.get_platform_id()}:{event.get_session_id()}"
         try:
-            client = await self._client()
-            async with client.post(f"{self.base}/reset", json={"session": key}, headers=self._headers()) as resp:
-                await resp.text()
+            await self._request("/reset", {"session": key})
             yield event.plain_result("这个对话的上下文已清空。")
         except Exception as e:  # noqa: BLE001
             yield event.plain_result(f"清空失败：{type(e).__name__}")

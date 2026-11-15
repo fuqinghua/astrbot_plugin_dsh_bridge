@@ -1,8 +1,8 @@
 {
   "bridge_url": {
-    "description": "DSH 桥地址",
+    "description": "DSH 桥地址（可填多个，逗号分隔，按顺序自动探测）",
     "type": "string",
-    "hint": "和 DSH 在同一网络命名空间时用 http://127.0.0.1:8787；否则填桥所在主机的 IP",
+    "hint": "例：http://127.0.0.1:8787,http://192.168.17.159:8787",
     "default": "http://127.0.0.1:8787"
   },
   "token": {
