@@ -1,0 +1,5 @@
+name: astrbot_plugin_dsh_bridge
+desc: 把 AstrBot 收到的消息转发给本机 DSH 智能体（DSH Go），由它来操作这台手机
+version: v1.0.0
+author: dsh
+repo: ""

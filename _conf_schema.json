@@ -1,0 +1,40 @@
+{
+  "bridge_url": {
+    "description": "DSH 桥地址",
+    "type": "string",
+    "hint": "和 DSH 在同一网络命名空间时用 http://127.0.0.1:8787；否则填桥所在主机的 IP",
+    "default": "http://127.0.0.1:8787"
+  },
+  "token": {
+    "description": "桥的访问令牌",
+    "type": "string",
+    "hint": "内容等于 /root/dsh-bridge/token 文件里的一行",
+    "default": ""
+  },
+  "reply_mode": {
+    "description": "什么消息才转给 DSH",
+    "type": "string",
+    "hint": "at_or_private=被 @ 或私聊时；all=所有消息；prefix=以 prefix 开头时",
+    "default": "at_or_private"
+  },
+  "prefix": {
+    "description": "prefix 模式下的触发前缀",
+    "type": "string",
+    "default": "dsh "
+  },
+  "timeout": {
+    "description": "单次请求最长等待秒数",
+    "type": "int",
+    "default": 300
+  },
+  "show_progress": {
+    "description": "等待时先回一条「收到，处理中」",
+    "type": "bool",
+    "default": true
+  },
+  "reset_command": {
+    "description": "清空该会话上下文的指令",
+    "type": "string",
+    "default": "/dsh reset"
+  }
+}
