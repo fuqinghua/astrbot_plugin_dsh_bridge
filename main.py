@@ -48,6 +48,7 @@ class DshBridge(Star):
         client = await self._client()
         last = None
         for base in list(self.bases):
+            logger.info(f"[dsh_bridge] 尝试 {base}")
             try:
                 async with client.post(base + path, json=payload, headers=self._headers()) as resp:
                     text = await resp.text()
@@ -59,6 +60,7 @@ class DshBridge(Star):
                     return resp.status, text
             except Exception as e:  # noqa: BLE001
                 last = e
+                logger.info(f"[dsh_bridge] {base} 不可用：{type(e).__name__}: {e}")
                 continue
         raise last or RuntimeError("没有可用的桥地址")
 
