@@ -24,7 +24,8 @@ class DshBridge(Star):
         self.base = self.bases[0]
         self.token = str(self.config.get("token", "")).strip()
         self.mode = str(self.config.get("reply_mode", "at_or_private")).strip()
-        self.prefix = str(self.config.get("prefix", "dsh "))
+        self.prefix = str(self.config.get("prefix", "m_command")).strip()
+        self.reply_prefix = str(self.config.get("reply_prefix", "[dsh-go] "))
         self.timeout = int(self.config.get("timeout", 300) or 300)
         self.show_progress = bool(self.config.get("show_progress", True))
         self.reset_command = str(self.config.get("reset_command", "/dsh reset")).strip()
@@ -68,7 +69,7 @@ class DshBridge(Star):
         if self.mode == "all":
             return True
         if self.mode == "prefix":
-            return text.startswith(self.prefix)
+            return text.lower().startswith(self.prefix.lower())
         # at_or_private：私聊，或被 @ / 唤醒
         try:
             if event.is_private_chat():
@@ -88,7 +89,7 @@ class DshBridge(Star):
         if not self._should_handle(event, text):
             return
         if self.mode == "prefix":
-            text = text[len(self.prefix):].strip()
+            text = text[len(self.prefix):].lstrip(" :：,，").strip()
             if not text:
                 return
 
@@ -107,15 +108,15 @@ class DshBridge(Star):
                 err = data.get("error") or f"HTTP {status}"
                 detail = data.get("detail") or ""
                 logger.warning(f"[dsh_bridge] failed: {err} {detail}")
-                yield event.plain_result(f"DSH 那边出错了：{err}"[:500])
+                yield event.plain_result(self.reply_prefix + f"出错了：{err}"[:480])
                 return
             reply = (data.get("reply") or "").strip() or "（DSH 没有返回内容）"
-            yield event.plain_result(reply)
+            yield event.plain_result(self.reply_prefix + reply)
         except asyncio.TimeoutError:
-            yield event.plain_result("等太久了，这次先放弃。可以让我做个更小的动作再试。")
+            yield event.plain_result(self.reply_prefix + "等太久了，这次先放弃。")
         except Exception as e:  # noqa: BLE001
             logger.error(f"[dsh_bridge] request error: {e}")
-            yield event.plain_result(f"连不上 DSH 桥（试过 {', '.join(self.bases)}）：{type(e).__name__}")
+            yield event.plain_result(self.reply_prefix + f"连不上桥（试过 {len(self.bases)} 个地址）：{type(e).__name__}")
 
     async def _reset(self, event: AstrMessageEvent):
         key = f"{event.get_platform_id()}:{event.get_session_id()}"

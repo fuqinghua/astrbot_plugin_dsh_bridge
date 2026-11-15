@@ -14,13 +14,14 @@
   "reply_mode": {
     "description": "什么消息才转给 DSH",
     "type": "string",
-    "hint": "at_or_private=被 @ 或私聊时；all=所有消息；prefix=以 prefix 开头时",
-    "default": "at_or_private"
+    "hint": "prefix=以触发前缀开头时；all=所有消息；at_or_private=被 @ 或私聊时",
+    "default": "prefix"
   },
   "prefix": {
-    "description": "prefix 模式下的触发前缀",
+    "description": "触发前缀",
     "type": "string",
-    "default": "dsh "
+    "hint": "消息以它开头才会转给 DSH，大小写不敏感",
+    "default": "m_command"
   },
   "timeout": {
     "description": "单次请求最长等待秒数",
@@ -36,5 +37,11 @@
     "description": "清空该会话上下文的指令",
     "type": "string",
     "default": "/dsh reset"
+  },
+  "reply_prefix": {
+    "description": "回复前缀",
+    "type": "string",
+    "hint": "DSH 的回复会带上这个标识",
+    "default": "[dsh-go] "
   }
 }
